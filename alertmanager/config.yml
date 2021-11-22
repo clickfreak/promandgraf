@@ -1,0 +1,13 @@
+global:
+  resolve_timeout: 5m
+
+ 
+receivers:
+  - name: alerta
+    webhook_configs:
+      - send_resolved: true
+        url: http://alerta:8080/api/webhooks/prometheus
+
+route:
+  receiver: 'alerta'
+

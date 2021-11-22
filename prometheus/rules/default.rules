@@ -1,0 +1,14 @@
+groups:
+- name: default alert rules
+  rules:
+  - alert: Watchdog
+    annotations:
+      description: This is an alert meant to ensure that the entire alerting pipeline
+        is functional.
+      summary: Ensure entire alerting pipeline is functional
+    expr: vector(1)
+    for: 5m
+    labels:
+      severity: major
+      watchdog: true
+

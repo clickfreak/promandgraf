@@ -1,0 +1,107 @@
+---
+
+version: '3.1'
+
+
+networks:
+  back-tier: {}
+  #traefik_public-tier:
+  #  external: true
+
+
+services:
+  grafana:
+    image: grafana/grafana:latest
+    volumes:
+      - ./data/grafana:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning/
+    env_file:
+      - ./grafana/config.monitoring.env
+    networks:
+      - back-tier
+      # - traefik_public-tier
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.graf.rule=Host(`mon.neuroops.link`)"
+      - "traefik.http.routers.graf.tls=true"
+      - "traefik.http.routers.graf.tls.certresolver=myresolver"
+      - "traefik.docker.network=traefik_public-tier"
+    restart: always
+    depends_on:
+      - db-grafana
+#          condition: service_healthy
+
+
+  db-grafana:
+    # FIXME: be careful with data dir path
+    image: postgres:latest
+    volumes:
+      - ./data/db-grafana:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DATABASE: grafana
+      POSTGRES_USER: grafana
+      POSTGRES_PASSWORD: password # FIXME: get password from vault or k8s secrets
+      #    ports:
+      #     - 5432
+    networks:
+      - back-tier
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d grafana -U grafana"]
+      timeout: 10s
+      retries: 10
+
+  prometheus:
+    image: prom/prometheus
+    networks:
+      - back-tier
+      # - traefik_public-tier
+    volumes:
+      - ./prometheus:/etc/prometheus/:Z
+      - ./data/prometheus:/prometheus:Z
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--storage.tsdb.retention.time=14d' # TODO: deploy victoria metrics cluster as a long term storage
+    labels:
+      org.label-schema.group: "monitoring"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prom.rule=Host(`prom.mon.neuroops.link`)"
+      - "traefik.http.routers.prom.tls=true"
+      - "traefik.http.routers.prom.tls.certresolver=myresolver"
+      - "traefik.docker.network=traefik_public-tier" 
+
+
+  alertmanager:
+    image: prom/alertmanager
+    volumes:
+      - ./alertmanager:/etc/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/config.yml'
+      - '--storage.path=/alertmanager'
+    restart: unless-stopped
+    #    expose:
+    #      - 9093 
+    networks:
+      - back-tier
+    labels:
+      org.label-schema.group: "monitoring"
+
+  node-exporter:
+    image: prom/node-exporter
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - --collector.filesystem.ignored-mount-points
+      - "^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)"
+#    ports:
+#      - 9100:9100
+    networks:
+      - back-tier
+    restart: always
