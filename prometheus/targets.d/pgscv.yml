@@ -1,4 +1,0 @@
-- targets:
-   - example.com
-  labels:
-    exporter_port: 9890

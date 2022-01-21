@@ -1,0 +1,5 @@
+#- targets:
+#   - node-exporter
+#  labels:
+#    exporter_port: 9100
+#    exporter_name: node_exporter
