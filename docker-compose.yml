@@ -86,8 +86,32 @@ services:
     #      - 9093 
     networks:
       - back-tier
+      - traefik_public-tier
     labels:
       org.label-schema.group: "monitoring"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.am.rule=Host(`alert.mon.neuroops.link`)"
+      - "traefik.http.routers.am.tls=true"
+      - "traefik.http.routers.am.tls.certresolver=myresolver"
+      - "traefik.docker.network=traefik_public-tier"
+
+  karma:
+    image: ghcr.io/prymitive/karma:latest
+    environment:
+      ALERTMANAGER_URI: https://alert.mon.neuroops.link
+    restart: unless-stopped
+    networks:
+      - back-tier
+      - traefik_public-tier
+    labels:
+      org.label-schema.group: "monitoring"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.karma.rule=Host(`karma.mon.neuroops.link`)"
+      - "traefik.http.routers.karma.tls=true"
+      - "traefik.http.routers.karma.tls.certresolver=myresolver"
+      - "traefik.docker.network=traefik_public-tier"
 
   node-exporter:
     image: prom/node-exporter
