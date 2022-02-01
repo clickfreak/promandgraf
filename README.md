@@ -1,3 +1,5 @@
+### promandgraf
+
 ```
 $ git clone https://github.com/clickfreak/promandgraf
 $ cd promandgraf
@@ -15,8 +17,7 @@ $ docker-compose up -d
 
 Remove `:Z` from volumes definitions if you use linux system without selinux.
 
-add targets
------------
+### add targets
 
 You can add file `prometheus/targets.d/node_exporters.yml`:
 ```
